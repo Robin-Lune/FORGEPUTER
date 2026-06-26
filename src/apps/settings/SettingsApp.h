@@ -17,6 +17,7 @@ private:
     };
 
     static constexpr int itemCount_ = 4;
+    static constexpr int brightnessStep_ = 10;
     const char* items_[itemCount_] = {
         "Brightness",
         "Sound",
@@ -25,10 +26,14 @@ private:
     };
     View view_ = View::List;
     int selectedIndex_ = 0;
+    int brightness_ = 50;
 
     void moveSelection(int delta);
+    void adjustBrightness(int delta);
+    void applyBrightness();
     void drawList();
     void drawDetail();
+    void drawBrightnessDetail();
     void drawFooter();
     void openSelectedItem();
     void goBack();

@@ -9,6 +9,7 @@ void SettingsApp::init()
 {
     view_ = View::List;
     selectedIndex_ = 0;
+    applyBrightness();
 }
 
 void SettingsApp::update()
@@ -43,6 +44,14 @@ void SettingsApp::onKey(const KeyInput& input)
     }
 
     if (view_ != View::List) {
+        if (selectedIndex_ == 0 && input.left) {
+            adjustBrightness(-brightnessStep_);
+        }
+
+        if (selectedIndex_ == 0 && input.right) {
+            adjustBrightness(brightnessStep_);
+        }
+
         return;
     }
 
@@ -76,6 +85,29 @@ void SettingsApp::moveSelection(int delta)
     }
 
     drawList();
+}
+
+void SettingsApp::adjustBrightness(int delta)
+{
+    brightness_ += delta;
+
+    if (brightness_ < 10) {
+        brightness_ = 10;
+    }
+
+    if (brightness_ > 100) {
+        brightness_ = 100;
+    }
+
+    applyBrightness();
+    drawDetail();
+}
+
+void SettingsApp::applyBrightness()
+{
+    const int hardwareBrightness = (brightness_ * 255) / 100;
+
+    M5Cardputer.Display.setBrightness(hardwareBrightness);
 }
 
 void SettingsApp::drawList()
@@ -115,7 +147,7 @@ void SettingsApp::drawDetail()
     display.setCursor(Theme::margin, 58);
 
     if (selectedIndex_ == 0) {
-        display.print("Level: 50%");
+        drawBrightnessDetail();
     } else if (selectedIndex_ == 1) {
         display.print("Sound: enabled");
     } else if (selectedIndex_ == 2) {
@@ -127,6 +159,29 @@ void SettingsApp::drawDetail()
     }
 
     Screen::drawInputLine("Esc: Home  Del: Back");
+}
+
+void SettingsApp::drawBrightnessDetail()
+{
+    auto& display = M5Cardputer.Display;
+    const int barX = Theme::margin;
+    const int barY = 78;
+    const int barWidth = display.width() - (Theme::margin * 2);
+    const int barHeight = 10;
+    const int fillWidth = (barWidth * brightness_) / 100;
+
+    display.print("Level: ");
+    display.print(brightness_);
+    display.print("%");
+
+    display.drawRect(barX, barY, barWidth, barHeight, Theme::text);
+
+    if (fillWidth > 2) {
+        display.fillRect(barX + 1, barY + 1, fillWidth - 2, barHeight - 2, Theme::accent);
+    }
+
+    display.setCursor(Theme::margin, 100);
+    display.print("</>: Adjust");
 }
 
 void SettingsApp::drawFooter()
