@@ -1,12 +1,16 @@
 #include "SettingsApp.h"
 
+#include <Arduino.h>
 #include <M5Cardputer.h>
 
 #include "../../ui/Screen.h"
 #include "../../ui/Theme.h"
 
-SettingsApp::SettingsApp(SettingsManager &settingsManager)
-    : brightnessView_(settingsManager)
+SettingsApp::SettingsApp(SettingsManager &settingsManager, PowerManager &powerManager, LaunchChargeModeCallback launchChargeMode)
+    : brightnessView_(settingsManager),
+      batteryView_(powerManager),
+      powerManager_(powerManager),
+      launchChargeMode_(launchChargeMode)
 {
 }
 
@@ -14,11 +18,21 @@ void SettingsApp::init()
 {
     view_ = View::List;
     selectedIndex_ = 0;
+    listOffset_ = 0;
     brightnessView_.applySaved();
 }
 
 void SettingsApp::update()
 {
+    if (!isBatteryDetailOpen()) {
+        return;
+    }
+
+    const unsigned long now = millis();
+
+    if (now - lastBatteryRefreshMs_ >= batteryRefreshIntervalMs_) {
+        drawDetail();
+    }
 }
 
 void SettingsApp::draw()
@@ -29,6 +43,7 @@ void SettingsApp::draw()
     if (view_ == View::List)
     {
         Screen::drawTitle("Settings", "System preferences");
+        drawBattery();
         drawList();
         drawFooter();
         return;
@@ -82,6 +97,7 @@ void SettingsApp::close()
 {
     cancelPendingChanges();
     view_ = View::List;
+    updateListOffset();
 }
 
 void SettingsApp::moveSelection(int delta)
@@ -103,7 +119,21 @@ void SettingsApp::moveSelection(int delta)
         selectedIndex_ = 0;
     }
 
+    updateListOffset();
     drawList();
+}
+
+void SettingsApp::updateListOffset()
+{
+    if (selectedIndex_ < listOffset_)
+    {
+        listOffset_ = selectedIndex_;
+    }
+
+    if (selectedIndex_ >= listOffset_ + visibleItemCount_)
+    {
+        listOffset_ = selectedIndex_ - visibleItemCount_ + 1;
+    }
 }
 
 void SettingsApp::drawList()
@@ -112,13 +142,26 @@ void SettingsApp::drawList()
     const int startY = 54;
     const int rowHeight = 18;
 
-    display.fillRect(0, startY, display.width(), rowHeight * itemCount_, Theme::background);
+    display.fillRect(0, startY - 6, display.width(), rowHeight * visibleItemCount_ + 14, Theme::background);
     display.setTextSize(Theme::bodyTextSize);
 
-    for (int index = 0; index < itemCount_; index++)
+    if (listOffset_ > 0)
     {
-        const int y = startY + (index * rowHeight);
+        display.setTextColor(Theme::accent);
+        display.setCursor(display.width() - Theme::margin - 6, startY - 6);
+        display.print("^");
+    }
+
+    for (int visibleIndex = 0; visibleIndex < visibleItemCount_; visibleIndex++)
+    {
+        const int index = listOffset_ + visibleIndex;
+        const int y = startY + (visibleIndex * rowHeight);
         const bool selected = index == selectedIndex_;
+
+        if (index >= itemCount_)
+        {
+            break;
+        }
 
         display.setTextColor(selected ? Theme::background : Theme::text);
 
@@ -130,6 +173,19 @@ void SettingsApp::drawList()
         display.setCursor(Theme::margin + 4, y + 3);
         display.print(items_[index]);
     }
+
+    if (listOffset_ + visibleItemCount_ < itemCount_)
+    {
+        display.setTextColor(Theme::accent);
+        display.setCursor(display.width() - Theme::margin - 6, startY + (rowHeight * visibleItemCount_) - 2);
+        display.print("v");
+    }
+}
+
+void SettingsApp::drawBattery()
+{
+    powerManager_.update();
+    Screen::drawBatteryIndicator(powerManager_.snapshot().batteryLevel);
 }
 
 void SettingsApp::drawDetail()
@@ -139,6 +195,7 @@ void SettingsApp::drawDetail()
 
     Screen::clear();
     Screen::drawTitle(title, "Setting detail");
+    drawBattery();
 
     display.setTextColor(Theme::text);
     display.setTextSize(Theme::bodyTextSize);
@@ -148,13 +205,18 @@ void SettingsApp::drawDetail()
     {
         brightnessView_.draw();
     }
-    else if (selectedIndex_ == 1)
+    else if (selectedIndex_ == Sound)
     {
         display.print("Sound: enabled");
     }
-    else if (selectedIndex_ == 2)
+    else if (selectedIndex_ == Battery)
     {
-        display.print("Battery: unknown");
+        batteryView_.draw();
+        lastBatteryRefreshMs_ = millis();
+    }
+    else if (selectedIndex_ == ChargeMode)
+    {
+        display.print("Enter Charge Mode");
     }
     else
     {
@@ -183,6 +245,12 @@ void SettingsApp::openSelectedItem()
         brightnessView_.open();
     }
 
+    if (selectedIndex_ == ChargeMode)
+    {
+        launchChargeMode_();
+        return;
+    }
+
     view_ = View::Detail;
     draw();
 }
@@ -198,6 +266,11 @@ void SettingsApp::goBack()
 
     view_ = View::List;
     draw();
+}
+
+bool SettingsApp::isBatteryDetailOpen() const
+{
+    return view_ == View::Detail && selectedIndex_ == Battery;
 }
 
 void SettingsApp::returnToList()

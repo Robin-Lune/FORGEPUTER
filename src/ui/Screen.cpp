@@ -30,6 +30,41 @@ void drawTitle(const char* title, const char* subtitle)
     display.print(subtitle);
 }
 
+void drawBatteryIndicator(int level)
+{
+    auto& display = M5Cardputer.Display;
+    const int width = 22;
+    const int height = 10;
+    const int capWidth = 2;
+    const int x = display.width() - Theme::margin - width - capWidth - 24;
+    const int y = Theme::titleY + 1;
+    int fillWidth = 0;
+
+    if (level < 0) {
+        level = 0;
+    }
+
+    if (level > 100) {
+        level = 100;
+    }
+
+    fillWidth = ((width - 2) * level) / 100;
+
+    display.fillRect(x - 2, y - 1, width + capWidth + 28, height + 4, Theme::background);
+    display.drawRect(x, y, width, height, Theme::text);
+    display.fillRect(x + width, y + 3, capWidth, height - 6, Theme::text);
+
+    if (fillWidth > 0) {
+        display.fillRect(x + 1, y + 1, fillWidth, height - 2, Theme::accent);
+    }
+
+    display.setTextColor(Theme::text);
+    display.setTextSize(Theme::bodyTextSize);
+    display.setCursor(x + width + capWidth + 4, y + 1);
+    display.print(level);
+    display.print("%");
+}
+
 void drawStatus(const char* message)
 {
     auto& display = M5Cardputer.Display;

@@ -1,15 +1,21 @@
 #include <M5Cardputer.h>
 
+#include "apps/charge/ChargeModeApp.h"
 #include "apps/home/HomeApp.h"
 #include "apps/settings/SettingsApp.h"
 #include "core/AppManager.h"
+#include "core/PowerManager.h"
 #include "core/SettingsManager.h"
 
 namespace {
+void launchChargeMode();
+
 AppManager appManager;
 SettingsManager settingsManager;
-HomeApp homeApp;
-SettingsApp settingsApp(settingsManager);
+PowerManager powerManager;
+HomeApp homeApp(powerManager);
+ChargeModeApp chargeModeApp(powerManager, settingsManager);
+SettingsApp settingsApp(settingsManager, powerManager, launchChargeMode);
 
 bool readKeyInput(KeyInput& input)
 {
@@ -50,6 +56,11 @@ bool handleGlobalNavigation(const KeyInput& input)
 
     return true;
 }
+
+void launchChargeMode()
+{
+    appManager.setApp(chargeModeApp);
+}
 }
 
 void setup()
@@ -62,6 +73,7 @@ void setup()
 
     settingsManager.begin();
     M5Cardputer.Display.setBrightness(settingsManager.hardwareBrightness());
+    powerManager.update();
     appManager.setApp(homeApp);
     Serial.println("Forgeputer booted");
 }

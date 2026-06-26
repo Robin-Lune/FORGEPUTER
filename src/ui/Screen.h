@@ -6,6 +6,7 @@ namespace Screen {
 void setup();
 void clear();
 void drawTitle(const char* title, const char* subtitle);
+void drawBatteryIndicator(int level);
 void drawStatus(const char* message);
 void drawInputLine(const String& inputLine);
 void drawNavigationFooter(const char* homeLabel, const char* moveLabel);
