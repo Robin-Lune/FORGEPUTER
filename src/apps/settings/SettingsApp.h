@@ -1,5 +1,7 @@
 #pragma once
 
+#include "BrightnessSettingView.h"
+
 #include "../../core/App.h"
 #include "../../core/SettingsManager.h"
 
@@ -14,30 +16,35 @@ public:
     void close() override;
 
 private:
+    enum Item {
+        Brightness = 0,
+        Sound,
+        Battery,
+        About,
+    };
+
     enum class View {
         List,
         Detail,
     };
 
     static constexpr int itemCount_ = 4;
-    static constexpr int brightnessStep_ = 10;
     const char* items_[itemCount_] = {
         "Brightness",
         "Sound",
         "Battery",
         "About",
     };
-    SettingsManager& settingsManager_;
+    BrightnessSettingView brightnessView_;
     View view_ = View::List;
     int selectedIndex_ = 0;
 
     void moveSelection(int delta);
-    void adjustBrightness(int delta);
-    void applyBrightness();
     void drawList();
     void drawDetail();
-    void drawBrightnessDetail();
     void drawFooter();
     void openSelectedItem();
     void goBack();
+    void returnToList();
+    void cancelPendingChanges();
 };

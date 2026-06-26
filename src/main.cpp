@@ -60,6 +60,8 @@ void setup()
     Serial.begin(115200);
     delay(100);
 
+    settingsManager.begin();
+    M5Cardputer.Display.setBrightness(settingsManager.hardwareBrightness());
     appManager.setApp(homeApp);
     Serial.println("Forgeputer booted");
 }
