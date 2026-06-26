@@ -1,6 +1,6 @@
 #include "HomeApp.h"
 
-#include <M5Cardputer.h>
+#include "../../ui/Screen.h"
 
 void HomeApp::init()
 {
@@ -13,7 +13,9 @@ void HomeApp::update()
 
 void HomeApp::draw()
 {
-    drawHeader();
+    Screen::setup();
+    Screen::clear();
+    Screen::drawTitle("Forgeputer", "Cardputer ADV firmware");
     drawStatus("Ready");
     drawInputLine();
 }
@@ -40,43 +42,12 @@ void HomeApp::close()
 {
 }
 
-void HomeApp::drawHeader()
-{
-    auto& display = M5Cardputer.Display;
-
-    display.setRotation(1);
-    display.fillScreen(BLACK);
-    display.setTextColor(GREEN);
-    display.setTextSize(2);
-    display.setCursor(8, 8);
-    display.print("Forgeputer");
-
-    display.setTextColor(WHITE);
-    display.setTextSize(1);
-    display.setCursor(8, 34);
-    display.print("Cardputer ADV firmware");
-}
-
 void HomeApp::drawStatus(const char* message)
 {
-    auto& display = M5Cardputer.Display;
-
-    display.fillRect(8, 58, display.width() - 16, 24, BLACK);
-    display.setTextColor(GREEN);
-    display.setTextSize(1);
-    display.setCursor(8, 58);
-    display.print(message);
+    Screen::drawStatus(message);
 }
 
 void HomeApp::drawInputLine()
 {
-    auto& display = M5Cardputer.Display;
-    const int y = display.height() - 24;
-
-    display.fillRect(0, y, display.width(), 24, BLACK);
-    display.drawFastHLine(0, y, display.width(), GREEN);
-    display.setTextColor(WHITE);
-    display.setTextSize(1);
-    display.setCursor(8, y + 8);
-    display.print(inputLine_);
+    Screen::drawInputLine(inputLine_);
 }

@@ -13,7 +13,6 @@ public:
 private:
     String inputLine_ = "> ";
 
-    void drawHeader();
     void drawStatus(const char* message);
     void drawInputLine();
 };
