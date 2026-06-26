@@ -11,6 +11,11 @@ void AppManager::setApp(App& app)
     currentApp_->draw();
 }
 
+bool AppManager::isCurrentApp(const App& app) const
+{
+    return currentApp_ == &app;
+}
+
 void AppManager::update()
 {
     if (currentApp_ != nullptr) {

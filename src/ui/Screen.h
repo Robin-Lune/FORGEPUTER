@@ -8,4 +8,5 @@ void clear();
 void drawTitle(const char* title, const char* subtitle);
 void drawStatus(const char* message);
 void drawInputLine(const String& inputLine);
+void drawNavigationFooter(const char* homeLabel, const char* moveLabel);
 }

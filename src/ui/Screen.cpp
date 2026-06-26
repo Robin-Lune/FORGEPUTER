@@ -59,4 +59,26 @@ void drawInputLine(const String& inputLine)
     display.setCursor(Theme::margin, y + Theme::margin);
     display.print(inputLine);
 }
+
+void drawNavigationFooter(const char* homeLabel, const char* moveLabel)
+{
+    auto& display = M5Cardputer.Display;
+    const int y = display.height() - Theme::inputHeight;
+    const int textY = y + Theme::margin;
+    const int arrowX = 82;
+    const int arrowY = y + 7;
+
+    display.fillRect(0, y, display.width(), Theme::inputHeight, Theme::background);
+    display.drawFastHLine(0, y, display.width(), Theme::accent);
+    display.setTextColor(Theme::text);
+    display.setTextSize(Theme::bodyTextSize);
+    display.setCursor(Theme::margin, textY);
+    display.print(homeLabel);
+
+    display.fillTriangle(arrowX, arrowY, arrowX - 4, arrowY + 7, arrowX + 4, arrowY + 7, Theme::text);
+    display.fillTriangle(arrowX + 12, arrowY + 7, arrowX + 8, arrowY, arrowX + 16, arrowY, Theme::text);
+
+    display.setCursor(arrowX + 24, textY);
+    display.print(moveLabel);
+}
 }

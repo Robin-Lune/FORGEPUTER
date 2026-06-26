@@ -1,11 +1,13 @@
 #include <M5Cardputer.h>
 
 #include "apps/home/HomeApp.h"
+#include "apps/settings/SettingsApp.h"
 #include "core/AppManager.h"
 
 namespace {
 AppManager appManager;
 HomeApp homeApp;
+SettingsApp settingsApp;
 
 bool readKeyInput(KeyInput& input)
 {
@@ -19,9 +21,30 @@ bool readKeyInput(KeyInput& input)
         input.characters += key;
     }
 
+    input.esc = keys.esc || input.characters.indexOf('`') >= 0;
+    input.tab = keys.tab;
     input.backspace = keys.backspace;
     input.del = keys.del;
     input.enter = keys.enter;
+    input.up = keys.up || input.characters.indexOf(';') >= 0;
+    input.down = keys.down || input.characters.indexOf('.') >= 0;
+    input.left = keys.left || input.characters.indexOf(',') >= 0;
+    input.right = keys.right || input.characters.indexOf('/') >= 0;
+
+    return true;
+}
+
+bool handleGlobalNavigation(const KeyInput& input)
+{
+    if (!input.esc) {
+        return false;
+    }
+
+    if (appManager.isCurrentApp(homeApp)) {
+        appManager.setApp(settingsApp);
+    } else {
+        appManager.setApp(homeApp);
+    }
 
     return true;
 }
@@ -45,7 +68,9 @@ void loop()
 
     KeyInput input;
     if (readKeyInput(input)) {
-        appManager.onKey(input);
+        if (!handleGlobalNavigation(input)) {
+            appManager.onKey(input);
+        }
     }
 
     appManager.update();
