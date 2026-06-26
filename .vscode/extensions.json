@@ -1,0 +1,9 @@
+{
+    "recommendations": [
+        "platformio.platformio-ide",
+        "ms-vscode.cpptools-extension-pack",
+        "editorconfig.editorconfig",
+        "yzhang.markdown-all-in-one",
+        "eamodio.gitlens"
+    ]
+}
