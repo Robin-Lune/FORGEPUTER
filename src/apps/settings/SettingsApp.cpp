@@ -7,6 +7,7 @@
 
 void SettingsApp::init()
 {
+    view_ = View::List;
     selectedIndex_ = 0;
 }
 
@@ -18,13 +19,33 @@ void SettingsApp::draw()
 {
     Screen::setup();
     Screen::clear();
-    Screen::drawTitle("Settings", "System preferences");
-    drawList();
-    drawFooter();
+
+    if (view_ == View::List) {
+        Screen::drawTitle("Settings", "System preferences");
+        drawList();
+        drawFooter();
+        return;
+    }
+
+    drawDetail();
 }
 
 void SettingsApp::onKey(const KeyInput& input)
 {
+    if (input.backspace || input.del) {
+        goBack();
+        return;
+    }
+
+    if (input.enter) {
+        openSelectedItem();
+        return;
+    }
+
+    if (view_ != View::List) {
+        return;
+    }
+
     if (input.up) {
         moveSelection(-1);
     }
@@ -40,6 +61,10 @@ void SettingsApp::close()
 
 void SettingsApp::moveSelection(int delta)
 {
+    if (view_ != View::List) {
+        return;
+    }
+
     selectedIndex_ += delta;
 
     if (selectedIndex_ < 0) {
@@ -77,7 +102,54 @@ void SettingsApp::drawList()
     }
 }
 
+void SettingsApp::drawDetail()
+{
+    auto& display = M5Cardputer.Display;
+    const char* title = items_[selectedIndex_];
+
+    Screen::clear();
+    Screen::drawTitle(title, "Setting detail");
+
+    display.setTextColor(Theme::text);
+    display.setTextSize(Theme::bodyTextSize);
+    display.setCursor(Theme::margin, 58);
+
+    if (selectedIndex_ == 0) {
+        display.print("Level: 50%");
+    } else if (selectedIndex_ == 1) {
+        display.print("Sound: enabled");
+    } else if (selectedIndex_ == 2) {
+        display.print("Battery: unknown");
+    } else {
+        display.print("Forgeputer");
+        display.setCursor(Theme::margin, 76);
+        display.print("M5Launcher ready");
+    }
+
+    Screen::drawInputLine("Esc: Home  Del: Back");
+}
+
 void SettingsApp::drawFooter()
 {
     Screen::drawNavigationFooter("Esc: Home", "Move");
+}
+
+void SettingsApp::openSelectedItem()
+{
+    if (view_ != View::List) {
+        return;
+    }
+
+    view_ = View::Detail;
+    draw();
+}
+
+void SettingsApp::goBack()
+{
+    if (view_ == View::List) {
+        return;
+    }
+
+    view_ = View::List;
+    draw();
 }

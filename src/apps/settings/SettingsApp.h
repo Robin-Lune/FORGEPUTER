@@ -11,6 +11,11 @@ public:
     void close() override;
 
 private:
+    enum class View {
+        List,
+        Detail,
+    };
+
     static constexpr int itemCount_ = 4;
     const char* items_[itemCount_] = {
         "Brightness",
@@ -18,9 +23,13 @@ private:
         "Battery",
         "About",
     };
+    View view_ = View::List;
     int selectedIndex_ = 0;
 
     void moveSelection(int delta);
     void drawList();
+    void drawDetail();
     void drawFooter();
+    void openSelectedItem();
+    void goBack();
 };
