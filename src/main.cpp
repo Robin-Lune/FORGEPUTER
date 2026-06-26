@@ -3,11 +3,13 @@
 #include "apps/home/HomeApp.h"
 #include "apps/settings/SettingsApp.h"
 #include "core/AppManager.h"
+#include "core/SettingsManager.h"
 
 namespace {
 AppManager appManager;
+SettingsManager settingsManager;
 HomeApp homeApp;
-SettingsApp settingsApp;
+SettingsApp settingsApp(settingsManager);
 
 bool readKeyInput(KeyInput& input)
 {

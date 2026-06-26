@@ -5,6 +5,11 @@
 #include "../../ui/Screen.h"
 #include "../../ui/Theme.h"
 
+SettingsApp::SettingsApp(SettingsManager& settingsManager)
+    : settingsManager_(settingsManager)
+{
+}
+
 void SettingsApp::init()
 {
     view_ = View::List;
@@ -89,25 +94,14 @@ void SettingsApp::moveSelection(int delta)
 
 void SettingsApp::adjustBrightness(int delta)
 {
-    brightness_ += delta;
-
-    if (brightness_ < 10) {
-        brightness_ = 10;
-    }
-
-    if (brightness_ > 100) {
-        brightness_ = 100;
-    }
-
+    settingsManager_.setBrightness(settingsManager_.brightness() + delta);
     applyBrightness();
     drawDetail();
 }
 
 void SettingsApp::applyBrightness()
 {
-    const int hardwareBrightness = (brightness_ * 255) / 100;
-
-    M5Cardputer.Display.setBrightness(hardwareBrightness);
+    M5Cardputer.Display.setBrightness(settingsManager_.hardwareBrightness());
 }
 
 void SettingsApp::drawList()
@@ -168,10 +162,11 @@ void SettingsApp::drawBrightnessDetail()
     const int barY = 78;
     const int barWidth = display.width() - (Theme::margin * 2);
     const int barHeight = 10;
-    const int fillWidth = (barWidth * brightness_) / 100;
+    const int brightness = settingsManager_.brightness();
+    const int fillWidth = (barWidth * brightness) / 100;
 
     display.print("Level: ");
-    display.print(brightness_);
+    display.print(brightness);
     display.print("%");
 
     display.drawRect(barX, barY, barWidth, barHeight, Theme::text);

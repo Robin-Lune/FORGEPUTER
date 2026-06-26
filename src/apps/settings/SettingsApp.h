@@ -1,9 +1,12 @@
 #pragma once
 
 #include "../../core/App.h"
+#include "../../core/SettingsManager.h"
 
 class SettingsApp : public App {
 public:
+    explicit SettingsApp(SettingsManager& settingsManager);
+
     void init() override;
     void update() override;
     void draw() override;
@@ -24,9 +27,9 @@ private:
         "Battery",
         "About",
     };
+    SettingsManager& settingsManager_;
     View view_ = View::List;
     int selectedIndex_ = 0;
-    int brightness_ = 50;
 
     void moveSelection(int delta);
     void adjustBrightness(int delta);
