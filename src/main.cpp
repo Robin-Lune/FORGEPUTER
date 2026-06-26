@@ -63,7 +63,7 @@ void handleKeyboard()
         inputLine += key;
     }
 
-    if (keys.del && inputLine.length() > 2) {
+    if ((keys.backspace || keys.del) && inputLine.length() > 2) {
         inputLine.remove(inputLine.length() - 1);
     }
 

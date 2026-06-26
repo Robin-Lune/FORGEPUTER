@@ -37,3 +37,5 @@ Le binaire principal attendu apres compilation est :
 ```
 
 Ce fichier doit pouvoir etre copie sur carte SD ou transmis via la WebUI de M5Launcher.
+
+La documentation projet detaillee vit dans `.codex/docs/`.
