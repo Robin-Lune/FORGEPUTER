@@ -24,10 +24,12 @@ void drawTitle(const char* title, const char* subtitle)
     display.setCursor(Theme::margin, Theme::titleY);
     display.print(title);
 
-    display.setTextColor(Theme::text);
-    display.setTextSize(Theme::bodyTextSize);
-    display.setCursor(Theme::margin, Theme::subtitleY);
-    display.print(subtitle);
+    if (subtitle[0] != '\0') {
+        display.setTextColor(Theme::text);
+        display.setTextSize(Theme::bodyTextSize);
+        display.setCursor(Theme::margin, Theme::subtitleY);
+        display.print(subtitle);
+    }
 }
 
 void drawBatteryIndicator(int level)
@@ -115,5 +117,28 @@ void drawNavigationFooter(const char* homeLabel, const char* moveLabel)
 
     display.setCursor(arrowX + 24, textY);
     display.print(moveLabel);
+}
+
+void drawCarouselFooter(const char* leftLabel, const char* rightLabel)
+{
+    auto& display = M5Cardputer.Display;
+    const int y = display.height() - Theme::inputHeight;
+    const int textY = y + Theme::margin;
+    const int centerX = display.width() / 2;
+    const int arrowY = y + 7;
+
+    display.fillRect(0, y, display.width(), Theme::inputHeight, Theme::background);
+    display.drawFastHLine(0, y, display.width(), Theme::accent);
+    display.setTextColor(Theme::text);
+    display.setTextSize(Theme::bodyTextSize);
+
+    display.setCursor(Theme::margin, textY);
+    display.print(leftLabel);
+
+    display.fillTriangle(centerX - 14, arrowY + 4, centerX - 6, arrowY - 4, centerX - 6, arrowY + 12, Theme::text);
+    display.fillTriangle(centerX + 14, arrowY + 4, centerX + 6, arrowY - 4, centerX + 6, arrowY + 12, Theme::text);
+
+    display.setCursor(display.width() - Theme::margin - 58, textY);
+    display.print(rightLabel);
 }
 }

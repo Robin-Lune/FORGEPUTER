@@ -10,4 +10,5 @@ void drawBatteryIndicator(int level);
 void drawStatus(const char* message);
 void drawInputLine(const String& inputLine);
 void drawNavigationFooter(const char* homeLabel, const char* moveLabel);
+void drawCarouselFooter(const char* leftLabel, const char* rightLabel);
 }

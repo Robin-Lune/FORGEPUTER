@@ -1,11 +1,12 @@
 #pragma once
 
 #include "../../core/App.h"
+#include "../../core/AppDescriptor.h"
 #include "../../core/PowerManager.h"
 
 class HomeApp : public App {
 public:
-    explicit HomeApp(PowerManager& powerManager);
+    HomeApp(PowerManager& powerManager, const AppDescriptor* apps, int appCount);
 
     void init() override;
     void update() override;
@@ -15,9 +16,15 @@ public:
 
 private:
     PowerManager& powerManager_;
-    String inputLine_ = "> ";
+    const AppDescriptor* apps_;
+    int appCount_;
+    int selectedIndex_ = 0;
 
+    void moveSelection(int delta);
     void drawBattery();
-    void drawStatus(const char* message);
-    void drawInputLine();
+    void drawCarousel();
+    void drawIcon();
+    void drawSideArrows();
+    void drawFooter();
+    void openSelectedItem();
 };
