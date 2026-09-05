@@ -8,6 +8,10 @@
 #include "freertos/task.h"
 #include "usb/usb_host.h"
 
+// Implementation split across Pn532UsbCdc*.cpp:
+//   Pn532UsbCdcTransport.cpp  transport API, RX buffering, event pumping
+//   Pn532UsbCdcHost.cpp       host install, enumeration, transfers
+// Shared tunables live in Pn532UsbCdcInternal.h.
 class Pn532UsbCdcTransport : public Pn532Transport {
 public:
     Pn532UsbCdcTransport();

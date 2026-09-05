@@ -6,6 +6,11 @@
 
 #include <vector>
 
+// Implementation split across Pn532Client*.cpp:
+//   Pn532Client.cpp             lifecycle and PN532 commands
+//   Pn532ClientFraming.cpp      frame IO on the transport
+//   Pn532ClientDiagnostics.cpp  raw command captures
+// Shared frame constants live in Pn532Protocol.h.
 class Pn532Client {
 public:
     explicit Pn532Client(Pn532Transport& transport);

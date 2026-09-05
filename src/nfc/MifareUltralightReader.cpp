@@ -1,3 +1,6 @@
+// MifareUltralightReader - MFU/NTAG page reads with raw and IDX fallbacks.
+// Version classification and reporting live in MifareUltralightReport.cpp.
+
 #include "MifareUltralightReader.h"
 
 #include <cstring>
@@ -22,6 +25,8 @@ bool MifareUltralightReader::read(const CardInfo& card, NfcDump& dump)
 {
     dump = NfcDump();
     dump.card = card;
+    dump.card.family = CardFamily::Type2;
+    dump.familyName = cardFamilyName(CardFamily::Type2);
     int maxPages = 45;
     bool rawFastReadWorked = false;
     bool fallbackUsed = false;
@@ -34,7 +39,19 @@ bool MifareUltralightReader::read(const CardInfo& card, NfcDump& dump)
     if (!read04.accepted) {
         dump.unitsTotal = maxPages;
         dump.unitsRead = 0;
+        dump.pagesTotal = maxPages;
+        dump.pagesRead = 0;
+        dump.pagesUnknown = maxPages;
         dump.unknownUnits = maxPages;
+        dump.storageSize = maxPages * 4;
+        dump.storage = String(dump.storageSize) + " bytes";
+        dump.protocol = "ISO14443A Type 2";
+        dump.readMethod = readMethodName(ReadMethod::Type2RawCrc);
+        dump.exactType = card.exactType.length() > 0 ? card.exactType : cardTypeName(card.type);
+        dump.product = dump.exactType;
+        dump.statusSummary = "Memory read failed";
+        dump.cloneSummary = "No memory dump";
+        dump.actionCapabilities = "Save info, Diagnostics";
         dump.card.isPartial = true;
         dump.status = DumpStatus::Partial;
         dump.reportLines.push_back("Type2 raw READ: ERR");
@@ -66,6 +83,7 @@ bool MifareUltralightReader::read(const CardInfo& card, NfcDump& dump)
     dump.unitsTotal = maxPages;
     std::vector<uint8_t> pagesData(maxPages * 4, 0);
     std::vector<bool> pageRead(maxPages, false);
+    int consecutiveErrors = 0;
 
     for (uint8_t page = 0; page < maxPages; page++) {
         std::vector<uint8_t> window;
@@ -74,8 +92,20 @@ bool MifareUltralightReader::read(const CardInfo& card, NfcDump& dump)
 
         if (!tryReadWindow(page, min(static_cast<int>(page + 3), maxPages - 1), window, source)) {
             emitProgress("Reading MFU", "Page " + String(page) + " ERR", page, maxPages, true, false);
+
+            if (page >= 4) {
+                consecutiveErrors++;
+
+                if (consecutiveErrors >= 4) {
+                    emitProgress("Reading MFU", "Stop after errors", page, maxPages, true, false);
+                    break;
+                }
+            }
+
             continue;
         }
+
+        consecutiveErrors = 0;
 
         if (source == "FAST raw") {
             rawFastReadWorked = true;
@@ -128,6 +158,7 @@ bool MifareUltralightReader::read(const CardInfo& card, NfcDump& dump)
     dump.unknownUnits = dump.missingUnits.size();
     dump.card.isPartial = !dump.missingUnits.empty();
     dump.status = dump.unitsRead > 0 && dump.missingUnits.empty() ? DumpStatus::Full : DumpStatus::Partial;
+    enrichType2Model(dump);
     enrichReport(dump, version, true, rawFastReadWorked, fallbackUsed, fallbackRecovered);
     return dump.unitsRead > 0;
 }
@@ -181,68 +212,6 @@ bool MifareUltralightReader::tryReadWindow(uint8_t startPage, uint8_t endPage, s
 
     setError(read.error.length() > 0 ? read.error : fast.error);
     return false;
-}
-
-void MifareUltralightReader::classifyVersion(const std::vector<uint8_t>& version, CardInfo& card, int& maxPages) const
-{
-    if (version.size() < 8) {
-        return;
-    }
-
-    if (version[2] == 0x03) {
-        card.type = CardType::MifareUltralight;
-
-        if (version[6] == 0x0B) {
-            maxPages = 20;
-        } else if (version[6] == 0x0E) {
-            maxPages = 44;
-        }
-    }
-
-    if (version[2] == 0x04) {
-        if (version[6] == 0x0F) {
-            card.type = CardType::Ntag213;
-            maxPages = 45;
-        } else if (version[6] == 0x11) {
-            card.type = CardType::Ntag215;
-            maxPages = 135;
-        } else if (version[6] == 0x13) {
-            card.type = CardType::Ntag216;
-            maxPages = 231;
-        }
-    }
-}
-
-void MifareUltralightReader::enrichReport(NfcDump& dump, const std::vector<uint8_t>& version, bool rawReadOk, bool rawFastReadWorked, bool fallbackUsed, int fallbackRecovered) const
-{
-    dump.vendor = version.empty() ? "unknown" : "NXP";
-    dump.product = cardTypeName(dump.card.type);
-    dump.protocol = "ISO14443A Type 2";
-    dump.storage = String(dump.unitsTotal * 4) + " bytes";
-    dump.getVersion = version.empty() ? "ERR" : bytesToHex(version.data(), version.size(), false);
-
-    if (dump.data.size() >= 0x11 * 4) {
-        dump.auth0 = bytesToHex(&dump.data[0x10 * 4 + 3], 1, false);
-    }
-
-    if (dump.data.size() >= 0x12 * 4) {
-        dump.access = bytesToHex(&dump.data[0x11 * 4 + 1], 1, false);
-    }
-
-    dump.reportLines.push_back("Type: " + dump.product);
-    dump.reportLines.push_back("Vendor: " + dump.vendor);
-    dump.reportLines.push_back("Storage: " + dump.storage);
-    dump.reportLines.push_back("Protocol: " + dump.protocol);
-    dump.reportLines.push_back("GET_VERSION: " + dump.getVersion);
-    dump.reportLines.push_back(String("Type2 raw READ: ") + (rawReadOk ? "OK" : "ERR"));
-    dump.reportLines.push_back(String("Type2 raw FAST_READ: ") + (rawFastReadWorked ? "OK" : "ERR/unused"));
-    dump.reportLines.push_back(String("Fallback IDX used: ") + (fallbackUsed ? "yes" : "no"));
-    dump.reportLines.push_back("READ windows: " + String(fallbackRecovered));
-    dump.reportLines.push_back("Pages read: " + String(dump.unitsRead) + "/" + String(dump.unitsTotal));
-    dump.reportLines.push_back("Protected pages: " + String(dump.protectedUnits));
-    dump.reportLines.push_back("Unknown pages: " + String(dump.unknownUnits));
-    dump.reportLines.push_back("AUTH0: " + (dump.auth0.length() > 0 ? dump.auth0 : "unknown"));
-    dump.reportLines.push_back("ACCESS: " + (dump.access.length() > 0 ? dump.access : "unknown"));
 }
 
 void MifareUltralightReader::emitProgress(const String& title, const String& detail, int current, int total, bool done, bool ok)

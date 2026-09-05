@@ -19,8 +19,26 @@ enum class CardType {
     BankCardUnsupported,
 };
 
+enum class CardFamily {
+    Unknown,
+    Type2,
+    MifareClassic,
+    Desfire,
+    Iso15693,
+    Em4100,
+};
+
+enum class ReadMethod {
+    Unknown,
+    Type2RawCrc,
+    InDataExchange,
+    Fallback,
+};
+
 struct CardInfo {
     CardType type = CardType::Unknown;
+    CardFamily family = CardFamily::Unknown;
+    String exactType;
     String uid;
     String atqa;
     String sak;
@@ -53,6 +71,22 @@ struct NfcDump {
     String getVersion;
     String auth0;
     String access;
+    String familyName;
+    String exactType;
+    String readMethod;
+    String statusSummary;
+    String cloneSummary;
+    String actionCapabilities;
+    String lockBytes;
+    String otpBytes;
+    int storageSize = 0;
+    int pagesTotal = 0;
+    int pagesRead = 0;
+    int pagesUnknown = 0;
+    int pagesProtected = 0;
+    std::vector<String> readableRanges;
+    std::vector<String> protectedRanges;
+    std::vector<String> unknownRanges;
     std::vector<uint8_t> missingUnits;
     std::vector<String> reportLines;
 };
@@ -70,7 +104,10 @@ using NfcReadProgressCallback = void (*)(void* context, const NfcReadProgress& p
 
 const char* cardTypeName(CardType type);
 const char* cardTypeSlug(CardType type);
+const char* cardFamilyName(CardFamily family);
+const char* readMethodName(ReadMethod method);
 const char* dumpStatusName(DumpStatus status);
+CardFamily cardFamilyForType(CardType type);
 String bytesToHex(const uint8_t* data, size_t length, bool separator = false);
 bool hexToBytes(const String& hex, std::vector<uint8_t>& out);
 CardType detectIso14443AType(uint16_t atqa, uint8_t sak);

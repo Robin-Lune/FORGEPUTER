@@ -1,19 +1,12 @@
+// Pn532KillerClient - slot selection, emulation control and upload dispatch.
+// Upload strategies live in Pn532KillerClientUpload.cpp, vendor constants in
+// Pn532KillerProtocol.h.
+
 #include "Pn532KillerClient.h"
 
-namespace {
-constexpr uint8_t commandSetWorkMode = 0xAC;
-constexpr uint8_t commandWriteEmulator = 0x1E;
-constexpr uint8_t workModePn532 = 0x01;
-constexpr uint8_t workModeEmulator = 0x02;
-constexpr uint8_t killerTypeMfc1K = 0x01;
-constexpr uint8_t killerTypeNtag = 0x02;
-constexpr uint8_t killerTypeIso15693 = 0x03;
-constexpr uint8_t killerTypeEm4100 = 0x04;
-constexpr int mfc1kBlockCount = 64;
-constexpr int mfcBlockSize = 16;
-constexpr int type2PageSize = 4;
-constexpr int iso15693BlockSize = 4;
-}
+#include "Pn532KillerProtocol.h"
+
+using namespace Pn532Killer;
 
 Pn532KillerClient::Pn532KillerClient(Pn532Client& pn532)
     : pn532_(pn532)
@@ -102,6 +95,8 @@ bool Pn532KillerClient::readSlotInfo(uint8_t slot, KillerSlotInfo& info)
 
 bool Pn532KillerClient::uploadDump(uint8_t slot, const NfcDump& dump)
 {
+    traceLines_.clear();
+
     if (slot > 7) {
         setError("Bad slot");
         return false;
@@ -126,7 +121,7 @@ bool Pn532KillerClient::uploadDump(uint8_t slot, const NfcDump& dump)
             return false;
         }
 
-        return uploadLinearUnits(slot, dumpType, dump, mfcBlockSize, mfc1kBlockCount, "MFC 1K");
+        return uploadMifareClassic1K(slot, dump);
     }
 
     if (dumpType == KillerSlotType::Ntag) {
@@ -138,7 +133,7 @@ bool Pn532KillerClient::uploadDump(uint8_t slot, const NfcDump& dump)
             return false;
         }
 
-        return uploadLinearUnits(slot, dumpType, dump, type2PageSize, pageCount, "NTAG");
+        return uploadNtagWindows(slot, dump, pageCount);
     }
 
     if (dumpType == KillerSlotType::Iso15693) {
@@ -150,7 +145,7 @@ bool Pn532KillerClient::uploadDump(uint8_t slot, const NfcDump& dump)
             return false;
         }
 
-        return uploadLinearUnits(slot, dumpType, dump, iso15693BlockSize, blockCount, "ISO15693");
+        return uploadAddressedUnits(slot, dumpType, dump, iso15693BlockSize, blockCount, "ISO15693");
     }
 
     setError("Slot type unsupported");
@@ -160,6 +155,11 @@ bool Pn532KillerClient::uploadDump(uint8_t slot, const NfcDump& dump)
 String Pn532KillerClient::lastError() const
 {
     return lastError_;
+}
+
+const std::vector<String>& Pn532KillerClient::traceLines() const
+{
+    return traceLines_;
 }
 
 bool Pn532KillerClient::setWorkMode(uint8_t mode, uint8_t type, uint8_t slot)
@@ -177,74 +177,6 @@ bool Pn532KillerClient::setWorkMode(uint8_t mode, uint8_t type, uint8_t slot)
     }
 
     return true;
-}
-
-bool Pn532KillerClient::uploadLinearUnits(uint8_t slot, KillerSlotType type, const NfcDump& dump, size_t unitSize, int unitCount, const String& label)
-{
-    const uint8_t typeCode = killerType(type);
-    const int total = unitCount + 1;
-
-    if (!setWorkMode(workModePn532, 0x00, 0x00)) {
-        return false;
-    }
-
-    emitProgress("Upload slot", label + " slot " + String(slot + 1), 0, total, false, true);
-
-    for (int index = 0; index < unitCount; index++) {
-        const uint8_t* unitData = &dump.data[index * unitSize];
-        const String detail = "Unit " + String(index + 1) + "/" + String(unitCount);
-
-        emitProgress("Upload slot", detail, index, total, false, true);
-
-        if (!writeEmulatorData(typeCode, slot, index, unitData, unitSize)) {
-            emitProgress("Upload slot", detail + " failed", index, total, true, false);
-            return false;
-        }
-    }
-
-    emitProgress("Upload slot", "Finalizing", unitCount, total, false, true);
-
-    if (!completeEmulatorWrite(typeCode, slot)) {
-        emitProgress("Upload slot", "Finalize failed", unitCount, total, true, false);
-        return false;
-    }
-
-    activeSlot_ = slot;
-    activeType_ = type;
-    emitProgress("Upload slot", "Slot ready", total, total, true, true);
-    return true;
-}
-
-bool Pn532KillerClient::writeEmulatorData(uint8_t type, uint8_t slot, uint16_t index, const uint8_t* data, size_t length)
-{
-    std::vector<uint8_t> command = {
-        commandWriteEmulator,
-        type,
-        slot,
-        static_cast<uint8_t>((index >> 8) & 0xFF),
-        static_cast<uint8_t>(index & 0xFF),
-    };
-    command.insert(command.end(), data, data + length);
-
-    std::vector<uint8_t> response;
-
-    if (!pn532_.rawCommand(command, response, 1500)) {
-        setError(pn532_.lastError());
-        return false;
-    }
-
-    if (response.empty()) {
-        setError("No slot response @" + String(index));
-        return false;
-    }
-
-    return true;
-}
-
-bool Pn532KillerClient::completeEmulatorWrite(uint8_t type, uint8_t slot)
-{
-    uint8_t zeroBlock[mfcBlockSize] = {0};
-    return writeEmulatorData(type, slot, 0xFFFF, zeroBlock, sizeof(zeroBlock));
 }
 
 uint8_t Pn532KillerClient::killerType(KillerSlotType type) const

@@ -13,6 +13,9 @@ struct DumpEntry {
     String uid;
 };
 
+// Implementation split across DumpStore*.cpp:
+//   DumpStore.cpp      SD layout, save, list, naming
+//   DumpStoreLoad.cpp  load and metadata JSON parsing
 class DumpStore {
 public:
     bool begin();

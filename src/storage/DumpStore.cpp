@@ -1,6 +1,8 @@
+// DumpStore - SD layout, dump saving, listing and naming.
+// Loading and metadata parsing live in DumpStoreLoad.cpp.
+
 #include "DumpStore.h"
 
-#include <cctype>
 #include <FS.h>
 #include <SD.h>
 
@@ -73,12 +75,69 @@ bool DumpStore::saveAs(const NfcDump& dump, const String& requestedName, String&
     json.println("  \"format\": \"forgeputer_nfc_dump_v1\",");
     json.print("  \"name\": \""); json.print(savedName); json.println("\",");
     json.print("  \"type\": \""); json.print(cardTypeSlug(dump.card.type)); json.println("\",");
+    json.print("  \"family\": \""); json.print(dump.familyName); json.println("\",");
+    json.print("  \"exact_type\": \""); json.print(dump.exactType); json.println("\",");
+    json.print("  \"exactType\": \""); json.print(dump.exactType); json.println("\",");
     json.print("  \"uid\": \""); json.print(dump.card.uid); json.println("\",");
     json.print("  \"atqa\": \""); json.print(dump.card.atqa); json.println("\",");
     json.print("  \"sak\": \""); json.print(dump.card.sak); json.println("\",");
     json.print("  \"read_status\": \""); json.print(dumpStatusName(dump.status)); json.println("\",");
     json.print("  \"units_total\": "); json.print(dump.unitsTotal); json.println(",");
     json.print("  \"units_read\": "); json.print(dump.unitsRead); json.println(",");
+    json.print("  \"pagesTotal\": "); json.print(dump.pagesTotal); json.println(",");
+    json.print("  \"pagesRead\": "); json.print(dump.pagesRead); json.println(",");
+    json.print("  \"pagesUnknown\": "); json.print(dump.pagesUnknown); json.println(",");
+    json.print("  \"pagesProtected\": "); json.print(dump.pagesProtected); json.println(",");
+    json.print("  \"storage_size\": "); json.print(dump.storageSize); json.println(",");
+    json.print("  \"read_method\": \""); json.print(dump.readMethod); json.println("\",");
+    json.print("  \"readMethod\": \""); json.print(dump.readMethod); json.println("\",");
+    json.print("  \"status_summary\": \""); json.print(dump.statusSummary); json.println("\",");
+    json.print("  \"statusSummary\": \""); json.print(dump.statusSummary); json.println("\",");
+    json.print("  \"clone_summary\": \""); json.print(dump.cloneSummary); json.println("\",");
+    json.print("  \"cloneSummary\": \""); json.print(dump.cloneSummary); json.println("\",");
+    json.print("  \"actionCapabilities\": \""); json.print(dump.actionCapabilities); json.println("\",");
+    json.print("  \"auth0\": \""); json.print(dump.auth0); json.println("\",");
+    json.print("  \"access\": \""); json.print(dump.access); json.println("\",");
+    json.print("  \"lockBytes\": \""); json.print(dump.lockBytes); json.println("\",");
+    json.print("  \"otpBytes\": \""); json.print(dump.otpBytes); json.println("\",");
+    json.print("  \"readableRanges\": [");
+
+    for (size_t i = 0; i < dump.readableRanges.size(); i++) {
+        if (i > 0) json.print(", ");
+        json.print("\""); json.print(dump.readableRanges[i]); json.print("\"");
+    }
+
+    json.println("],");
+    json.print("  \"protectedRanges\": [");
+
+    for (size_t i = 0; i < dump.protectedRanges.size(); i++) {
+        if (i > 0) json.print(", ");
+        json.print("\""); json.print(dump.protectedRanges[i]); json.print("\"");
+    }
+
+    json.println("],");
+    json.print("  \"unknownRanges\": [");
+
+    for (size_t i = 0; i < dump.unknownRanges.size(); i++) {
+        if (i > 0) json.print(", ");
+        json.print("\""); json.print(dump.unknownRanges[i]); json.print("\"");
+    }
+
+    json.println("],");
+    json.print("  \"pages\": [");
+
+    if (dump.card.family == CardFamily::Type2 || dump.familyName == "Type 2") {
+        const int pageCount = dump.data.size() / 4;
+
+        for (int page = 0; page < pageCount; page++) {
+            if (page > 0) json.print(", ");
+            json.print("{\"index\": "); json.print(page); json.print(", \"data\": \"");
+            json.print(bytesToHex(&dump.data[page * 4], 4, true));
+            json.print("\"}");
+        }
+    }
+
+    json.println("],");
     json.print("  \"missing_units\": [");
 
     for (size_t i = 0; i < dump.missingUnits.size(); i++) {
@@ -138,65 +197,6 @@ bool DumpStore::list(std::vector<DumpEntry>& entries)
     }
 
     dir.close();
-    return true;
-}
-
-bool DumpStore::load(const String& name, NfcDump& dump)
-{
-    if (!available_) {
-        setError("SD not ready");
-        return false;
-    }
-
-    File json = SD.open(metadataPath(name), FILE_READ);
-
-    if (!json) {
-        setError("Meta missing");
-        return false;
-    }
-
-    const String body = json.readString();
-    json.close();
-    File bin = SD.open(dataPath(name), FILE_READ);
-
-    if (!bin) {
-        setError("Data missing");
-        return false;
-    }
-
-    dump = NfcDump();
-    dump.name = name;
-    dump.card.type = parseType(jsonValue(body, "type"));
-    dump.card.uid = jsonValue(body, "uid");
-    dump.card.atqa = jsonValue(body, "atqa");
-    dump.card.sak = jsonValue(body, "sak");
-    dump.status = parseStatus(jsonValue(body, "read_status"));
-    dump.unitsTotal = jsonValue(body, "units_total").toInt();
-    dump.unitsRead = jsonValue(body, "units_read").toInt();
-    parseMissingUnits(body, dump.missingUnits);
-    dump.data.resize(bin.size());
-
-    if (!dump.data.empty()) {
-        bin.read(dump.data.data(), dump.data.size());
-    }
-
-    bin.close();
-
-    if (dump.unitsTotal == 0) {
-        if (dump.card.type == CardType::MifareClassicMini || dump.card.type == CardType::MifareClassic1K || dump.card.type == CardType::MifareClassic4K) {
-            dump.unitsTotal = mifareClassicSectorCount(dump.card.type);
-        } else if (dump.card.type == CardType::MifareUltralight || dump.card.type == CardType::Ntag213 || dump.card.type == CardType::Ntag215 || dump.card.type == CardType::Ntag216) {
-            dump.unitsTotal = dump.data.size() / 4;
-        }
-    }
-
-    if (dump.unitsRead == 0 && dump.unitsTotal > 0 && dump.status == DumpStatus::Full) {
-        dump.unitsRead = dump.unitsTotal;
-    } else if (dump.unitsRead == 0 && dump.unitsTotal > 0 && !dump.missingUnits.empty()) {
-        dump.unitsRead = dump.unitsTotal - dump.missingUnits.size();
-    }
-
-    dump.card.canEmulate = dump.card.type == CardType::MifareClassic1K || dump.card.type == CardType::MifareUltralight || dump.card.type == CardType::Ntag213 || dump.card.type == CardType::Ntag215 || dump.card.type == CardType::Ntag216;
     return true;
 }
 
@@ -288,108 +288,4 @@ bool DumpStore::ensureDirs()
 void DumpStore::setError(const String& error)
 {
     lastError_ = error;
-}
-
-CardType DumpStore::parseType(const String& value) const
-{
-    if (value == "mifare_classic_mini") return CardType::MifareClassicMini;
-    if (value == "mifare_classic_1k") return CardType::MifareClassic1K;
-    if (value == "mifare_classic_4k") return CardType::MifareClassic4K;
-    if (value == "mifare_ultralight") return CardType::MifareUltralight;
-    if (value == "ntag213") return CardType::Ntag213;
-    if (value == "ntag215") return CardType::Ntag215;
-    if (value == "ntag216") return CardType::Ntag216;
-    if (value == "iso15693") return CardType::Iso15693;
-    if (value == "em4100") return CardType::EM4100;
-    if (value == "desfire") return CardType::Desfire;
-    if (value == "bank_card_unsupported") return CardType::BankCardUnsupported;
-    if (value == "iso14443a") return CardType::Iso14443A;
-    return CardType::Unknown;
-}
-
-DumpStatus DumpStore::parseStatus(const String& value) const
-{
-    if (value == "info_only") return DumpStatus::InfoOnly;
-    if (value == "partial") return DumpStatus::Partial;
-    if (value == "full") return DumpStatus::Full;
-    return DumpStatus::Empty;
-}
-
-String DumpStore::jsonValue(const String& json, const String& key) const
-{
-    const String marker = "\"" + key + "\"";
-    int start = json.indexOf(marker);
-
-    if (start < 0) {
-        return "";
-    }
-
-    start = json.indexOf(':', start);
-
-    if (start < 0) {
-        return "";
-    }
-
-    start++;
-
-    while (start < static_cast<int>(json.length()) && isspace(static_cast<unsigned char>(json[start]))) {
-        start++;
-    }
-
-    if (start >= static_cast<int>(json.length())) {
-        return "";
-    }
-
-    if (json[start] == '"') {
-        const int end = json.indexOf('"', start + 1);
-        return end > start ? json.substring(start + 1, end) : "";
-    }
-
-    int end = start;
-
-    while (end < static_cast<int>(json.length()) && json[end] != ',' && json[end] != '\n' && json[end] != '}') {
-        end++;
-    }
-
-    String value = json.substring(start, end);
-    value.trim();
-    return value;
-}
-
-void DumpStore::parseMissingUnits(const String& json, std::vector<uint8_t>& out) const
-{
-    out.clear();
-    const String marker = "\"missing_units\"";
-    int start = json.indexOf(marker);
-
-    if (start < 0) {
-        return;
-    }
-
-    start = json.indexOf('[', start);
-    const int end = json.indexOf(']', start);
-
-    if (start < 0 || end < 0 || end <= start) {
-        return;
-    }
-
-    String token;
-
-    for (int i = start + 1; i < end; i++) {
-        const char c = json[i];
-
-        if (c >= '0' && c <= '9') {
-            token += c;
-            continue;
-        }
-
-        if (token.length() > 0) {
-            out.push_back(static_cast<uint8_t>(token.toInt()));
-            token = "";
-        }
-    }
-
-    if (token.length() > 0) {
-        out.push_back(static_cast<uint8_t>(token.toInt()));
-    }
 }

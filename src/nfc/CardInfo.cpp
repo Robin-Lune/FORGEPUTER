@@ -63,6 +63,28 @@ const char* cardTypeSlug(CardType type)
     }
 }
 
+const char* cardFamilyName(CardFamily family)
+{
+    switch (family) {
+    case CardFamily::Type2: return "Type 2";
+    case CardFamily::MifareClassic: return "MIFARE Classic";
+    case CardFamily::Desfire: return "DESFire";
+    case CardFamily::Iso15693: return "ISO15693";
+    case CardFamily::Em4100: return "EM4100";
+    default: return "Unknown";
+    }
+}
+
+const char* readMethodName(ReadMethod method)
+{
+    switch (method) {
+    case ReadMethod::Type2RawCrc: return "type2_raw_crc";
+    case ReadMethod::InDataExchange: return "indataexchange";
+    case ReadMethod::Fallback: return "fallback";
+    default: return "unknown";
+    }
+}
+
 const char* dumpStatusName(DumpStatus status)
 {
     switch (status) {
@@ -70,6 +92,30 @@ const char* dumpStatusName(DumpStatus status)
     case DumpStatus::Partial: return "partial";
     case DumpStatus::Full: return "full";
     default: return "empty";
+    }
+}
+
+CardFamily cardFamilyForType(CardType type)
+{
+    switch (type) {
+    case CardType::MifareUltralight:
+    case CardType::Ntag213:
+    case CardType::Ntag215:
+    case CardType::Ntag216:
+        return CardFamily::Type2;
+    case CardType::MifareClassicMini:
+    case CardType::MifareClassic1K:
+    case CardType::MifareClassic4K:
+        return CardFamily::MifareClassic;
+    case CardType::Desfire:
+    case CardType::BankCardUnsupported:
+        return CardFamily::Desfire;
+    case CardType::Iso15693:
+        return CardFamily::Iso15693;
+    case CardType::EM4100:
+        return CardFamily::Em4100;
+    default:
+        return CardFamily::Unknown;
     }
 }
 

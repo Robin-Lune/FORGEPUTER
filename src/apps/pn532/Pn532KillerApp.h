@@ -12,6 +12,19 @@
 #include "../../storage/DumpStore.h"
 #include "../../storage/KeyStore.h"
 
+// Implementation split across Pn532KillerApp*.cpp:
+//   Pn532KillerApp.cpp            lifecycle, transport selection, shared helpers
+//   Pn532KillerAppInput.cpp       key routing, list cursor
+//   Pn532KillerAppNavigation.cpp  view transitions, main menu routing
+//   Pn532KillerAppMenus.cpp       item counts and labels
+//   Pn532KillerAppViewsCard.cpp   transport/menu/card/read screens
+//   Pn532KillerAppViewsTools.cpp  dump/slot/emulate/write/lab screens
+//   Pn532KillerAppWidgets.cpp     list and scroll drawing primitives
+//   Pn532KillerAppRead.cpp        scan, read, retry, save, dump actions
+//   Pn532KillerAppDiagnostics.cpp MFU and raw PN532 diagnostics
+//   Pn532KillerAppSlots.cpp       PN532Killer slot banks
+//   Pn532KillerAppEmulation.cpp   BLE NDEF emulation, tag writing
+//   Pn532KillerAppLogs.cpp        SD log files
 class Pn532KillerApp : public App {
 public:
     explicit Pn532KillerApp(PowerManager& powerManager);
@@ -96,6 +109,8 @@ private:
     bool pendingSlotUpload_ = false;
     bool slotUploadResultVisible_ = false;
     bool ntagDiagnosticVisible_ = false;
+    bool rawDiagLegacyIdxFailed_ = false;
+    bool rawDiagType2CrcOk_ = false;
     View diagnosticReturnView_ = View::CardActions;
     int readLogOffset_ = 0;
     uint32_t bleEmulateStartedAt_ = 0;
@@ -188,11 +203,14 @@ private:
     bool uploadCurrentDumpToSlot();
     void runRawPn532Diagnostic();
     bool runRawScenario(const String& label, const std::vector<uint8_t>& samCommand, bool rfReset, bool maxRetries, bool inSelect, bool communicateThru, CardInfo& info);
+    bool runType2RawCrcDiagnostic(CardInfo& info);
     Pn532RawDiagnostic diagnoseTransportRaw(const std::vector<uint8_t>& command, uint8_t expectedResponseCode, const char* label, bool hasStatusByte, uint16_t timeoutMs);
     uint8_t targetFromInList(const Pn532RawDiagnostic& diag, CardInfo& info);
     bool runPolledRawDiagnostic(const String& label, const std::vector<uint8_t>& tagCommand, bool communicateThru, uint16_t timeoutMs, CardInfo& info);
     void appendRawDiagnostic(const String& label, const Pn532RawDiagnostic& diag);
+    void appendType2RawCrcDiagnostic(const String& label, const Pn532RawDiagnostic& diag);
     bool saveRawDiagnosticLog(const CardInfo& info, String& savedPath);
+    bool saveSlotUploadLog(KillerSlotType type, uint8_t slot, bool uploaded, bool emulationStarted, String& savedPath);
     int slotTypeIndex(KillerSlotType type) const;
     KillerSlotType slotTypeForIndex(int index) const;
     void cycleSlotType();

@@ -9,6 +9,12 @@
 #undef private
 #include <memory>
 
+// Implementation split across Pn532BleClient*.cpp:
+//   Pn532BleClient.cpp             link lifecycle, scan, read dispatch, retry
+//   Pn532BleClientReaders.cpp      Type 2 raw transceive, MFC and ISO15693
+//   Pn532BleClientNtag.cpp         MFU/NTAG read and report
+//   Pn532BleClientEmulation.cpp    NDEF emulation and APDU responder
+//   Pn532BleClientDiagnostics.cpp  raw PN532 command capture
 class Pn532BleClient {
 public:
     explicit Pn532BleClient(KeyStore& keys);
