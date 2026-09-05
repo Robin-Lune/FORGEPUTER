@@ -2,6 +2,7 @@
 
 #include "apps/charge/ChargeModeApp.h"
 #include "apps/home/HomeApp.h"
+#include "apps/pn532/Pn532KillerApp.h"
 #include "apps/placeholder/PlaceholderApp.h"
 #include "apps/settings/SettingsApp.h"
 #include "core/AppDescriptor.h"
@@ -26,7 +27,7 @@ void launchVitals();
 AppManager appManager;
 SettingsManager settingsManager;
 PowerManager powerManager;
-PlaceholderApp pn532KillerApp("PN532Killer", "NFC toolkit", powerManager);
+Pn532KillerApp pn532KillerApp(powerManager);
 PlaceholderApp meshtasticApp("Meshtastic", "LoRa mesh", powerManager);
 PlaceholderApp wifiApp("WiFi", "Wireless tools", powerManager);
 PlaceholderApp bleApp("BLE", "Bluetooth tools", powerManager);

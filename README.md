@@ -38,4 +38,10 @@ Le binaire principal attendu apres compilation est :
 
 Ce fichier doit pouvoir etre copie sur carte SD ou transmis via la WebUI de M5Launcher.
 
-La documentation projet detaillee vit dans `.codex/docs/`.
+## Documentation
+
+La documentation projet vit dans `.claude/` :
+
+- [`.claude/CLAUDE.md`](.claude/CLAUDE.md) — instructions et index
+- [`.claude/architecture.md`](.claude/architecture.md) — carte du systeme
+- [`.claude/docs/`](.claude/docs/) — detail par domaine
